@@ -55,14 +55,15 @@
   function setupEventListeners() {
     // User joined voice
     socket.on('voice:user_joined', async (payload) => {
+      console.log('[Voice] User joined:', payload.sid, 'my id:', socket.id);
       if (payload.sid === socket.id) {
-        // This is me joining, set up connections to existing participants
-        await new Promise(r => setTimeout(r, 500));
+        // This is me joining, set up connections to existing participants as initiator
+        await new Promise(r => setTimeout(r, 300));
         await setupPeerConnections(payload.participants);
       } else {
-        // Someone else joined, create a connection to them
-        await new Promise(r => setTimeout(r, 500));
-        await createPeerConnection(payload.sid, true);
+        // Someone else joined - wait for them to connect to us (they are the initiator)
+        // Don't create outgoing connection, just wait for their offer
+        console.log('[Voice] Waiting for', payload.sid, 'to connect to us');
       }
     });
 
