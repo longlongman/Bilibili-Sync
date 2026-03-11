@@ -8,6 +8,8 @@ from flask_socketio import join_room, leave_room
 
 from sync.chat.history import emit_history
 from sync.chat import handlers as chat_handlers  # noqa: F401
+from sync.voice import handlers as voice_handlers  # noqa: F401
+from sync.voice.state import voice_state
 from sync.state import playback_state
 
 ROOM = "shared-room"
@@ -26,6 +28,17 @@ def handle_connect(auth=None):
 @socketio.on("disconnect")
 def handle_disconnect():
     leave_room(ROOM)
+    # Clean up voice state
+    participant = voice_state.remove_participant(request.sid)
+    if participant:
+        participants = [
+            {"sid": p.sid, "label": p.label}
+            for p in voice_state.get_all_participants()
+        ]
+        socketio.emit(
+            "voice:user_left",
+            {"sid": request.sid, "label": participant.label, "participants": participants},
+        )
 
 
 @socketio.on("control")
