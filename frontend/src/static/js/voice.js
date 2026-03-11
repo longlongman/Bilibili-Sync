@@ -135,6 +135,8 @@
 
       // Emit join event
       socket.emit('voice:join', {}, (response) => {
+        // Ignore if timeout already handled
+        if (!isJoining) return;
         isJoining = false;
         if (!response || !response.ok) {
           console.error('[Voice] Join failed:', response);
