@@ -1,4 +1,3 @@
-// Initialize chat UI bindings once the room page has loaded.
 document.addEventListener('DOMContentLoaded', () => {
   if (!window.io) return;
 
@@ -17,19 +16,16 @@ document.addEventListener('DOMContentLoaded', () => {
   const messagesById = new Map();
   let unreadCount = 0;
 
-  // Update the inline chat status message and its visual tone.
   const setStatus = (text, tone = 'info') => {
     statusEl.textContent = text;
     statusEl.dataset.tone = tone;
   };
 
-  // Detect whether the message list is already scrolled near the bottom.
   const isNearBottom = () => {
     const threshold = 40;
     return list.scrollHeight - list.scrollTop - list.clientHeight <= threshold;
   };
 
-  // Reveal the unread badge when new messages arrive off-screen.
   const showIndicator = () => {
     if (!indicator) return;
     unreadCount += 1;
@@ -37,14 +33,12 @@ document.addEventListener('DOMContentLoaded', () => {
     indicator.textContent = `New messages (${unreadCount})`;
   };
 
-  // Hide and reset the unread badge after the user catches up.
   const clearIndicator = () => {
     if (!indicator) return;
     unreadCount = 0;
     indicator.hidden = true;
   };
 
-  // Append a message to the chat log while preserving scroll behavior.
   const renderMessage = (message, { fromHistory = false } = {}) => {
     if (!message || !message.message_id) return;
     if (messagesById.has(message.message_id)) return;

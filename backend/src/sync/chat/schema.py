@@ -27,7 +27,6 @@ class NormalizedMessage:
     client_reported_at: str | None
 
     def to_dict(self) -> dict[str, Any]:
-        """Convert the normalized message into the payload sent over Socket.IO."""
         return {
             "message_id": self.message_id,
             "sender_id": self.sender_id,
@@ -40,7 +39,6 @@ class NormalizedMessage:
 
 
 def _validate_content(raw: Any) -> str:
-    """Validate chat content length and normalize surrounding whitespace."""
     if raw is None:
         raise ValidationError("content_missing")
     content = str(raw).strip()

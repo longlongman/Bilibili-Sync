@@ -14,7 +14,6 @@ logger = logging.getLogger(__name__)
 
 
 def _sender_label() -> str:
-    """Generate the default anonymous label used in voice presence events."""
     sid = request.sid or "anonymous"
     return f"User-{sid[-6:]}"
 

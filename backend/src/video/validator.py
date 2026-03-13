@@ -6,7 +6,6 @@ BVID_PATTERN = re.compile(r"BV[0-9A-Za-z]{10}")
 
 
 def extract_bvid(url: str) -> Optional[str]:
-    """Extract a BV identifier from a supported Bilibili URL."""
     parsed = urlparse(url)
     candidate: Optional[str] = None
     # Direct path BV

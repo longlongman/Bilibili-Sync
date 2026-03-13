@@ -1,4 +1,3 @@
-// Wire the login and logout forms to the shared-password auth endpoints.
 document.addEventListener('DOMContentLoaded', () => {
   const loginForm = document.getElementById('login-form');
   const loginError = document.getElementById('login-error');
