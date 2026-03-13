@@ -15,12 +15,14 @@ CHAT_ROOM = "shared-room"
 logger = logging.getLogger(__name__)
 
 def _sender_label() -> str:
+    """Generate a stable anonymous display label from the active socket id."""
     sid = request.sid or "anonymous"
     return f"User-{sid[-6:]}"
 
 
 @socketio.on("chat:send")
 def handle_chat_send(payload):
+    """Validate, rate-limit, persist, and broadcast an incoming chat message."""
     if not is_authenticated():
         return {"ok": False, "error": "unauthorized"}
 

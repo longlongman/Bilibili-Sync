@@ -6,14 +6,17 @@ from typing import Optional
 
 
 def _utcnow() -> datetime:
+    """Return the current UTC time with timezone information attached."""
     return datetime.now(timezone.utc)
 
 
 def _format_timestamp(value: datetime) -> str:
+    """Serialize a UTC datetime to the wire format used by this app."""
     return value.isoformat().replace("+00:00", "Z")
 
 
 def _parse_timestamp(value: str | None) -> datetime | None:
+    """Parse a stored timestamp string back into a UTC datetime."""
     if not value:
         return None
     try:
@@ -35,6 +38,7 @@ class PlaybackState:
     last_event_at: Optional[str] = None
 
     def current_position_ms(self, at_time: datetime | None = None) -> int:
+        """Project the current playback position forward to the given time."""
         position = max(0, int(self.position_ms or 0))
         event_time = _parse_timestamp(self.last_event_at)
         target_time = at_time or _utcnow()
@@ -46,6 +50,7 @@ class PlaybackState:
         return max(0, position)
 
     def snapshot(self) -> dict:
+        """Return the current room state in the payload shape sent to clients."""
         state_at = _utcnow()
         state_at_ms = int(state_at.timestamp() * 1000)
         position_ms = self.current_position_ms(state_at)
@@ -58,6 +63,7 @@ class PlaybackState:
         }
 
     def set_video(self, url: str):
+        """Replace the current video and reset playback back to the start."""
         self.video_url = url
         self.position_ms = 0
         self.status = "paused"
@@ -70,6 +76,7 @@ class PlaybackState:
         position_ms: Optional[int],
         actor: Optional[str],
     ) -> Optional[dict]:
+        """Apply a playback control event and return the updated room snapshot."""
         if event_type not in {"play", "pause", "seek"}:
             return None
         if event_type == "seek" and position_ms is not None:

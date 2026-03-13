@@ -16,6 +16,7 @@ class VoiceState:
     """Manages voice chat participants in the shared room."""
 
     def __init__(self):
+        """Initialize the in-memory participant registry."""
         self._participants: dict[str, VoiceParticipant] = {}
 
     def add_participant(self, sid: str, label: str) -> VoiceParticipant:

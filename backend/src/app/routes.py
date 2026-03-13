@@ -17,11 +17,13 @@ except Exception:  # pragma: no cover - fallback when chat not present
 @bp.route("/", methods=["GET"])
 @require_auth
 def index():
+    """Render the main synced playback page for authenticated users."""
     return render_template("index.html")
 
 
 @bp.route("/login", methods=["GET", "POST"])
 def login():
+    """Render the login form or validate a submitted shared password."""
     if request.method == "POST":
         payload = request.get_json() or request.form
         password = payload.get("password") if payload else None
@@ -36,6 +38,7 @@ def login():
 @bp.route("/logout", methods=["POST"])
 @require_auth
 def logout():
+    """Clear the current session and return a simple JSON acknowledgement."""
     session.clear()
     return jsonify({"ok": True})
 
@@ -43,6 +46,7 @@ def logout():
 @bp.route("/video", methods=["POST"])
 @require_auth
 def set_video():
+    """Validate a Bilibili URL and replace the shared room's current video."""
     payload = request.get_json() or {}
     url = payload.get("url")
     valid, embed_url, error = normalize_bilibili_url(url)
@@ -56,6 +60,7 @@ def set_video():
 @bp.route("/api/chat/history", methods=["GET"])
 @require_auth
 def chat_history():
+    """Return the latest chat messages for the shared room."""
     if chat_store is None:
         return jsonify({"ok": False, "error": "chat_not_enabled"}), 404
     try:

@@ -18,6 +18,7 @@ logger = logging.getLogger(__name__)
 
 @socketio.on("connect")
 def handle_connect(auth=None):
+    """Authenticate the socket, join the shared room, and send initial state."""
     if not is_authenticated():
         return False  # disconnect
     join_room(ROOM)
@@ -27,6 +28,7 @@ def handle_connect(auth=None):
 
 @socketio.on("disconnect")
 def handle_disconnect():
+    """Leave the shared room and clean up any voice chat membership."""
     leave_room(ROOM)
     # Clean up voice state
     participant = voice_state.remove_participant(request.sid)
@@ -43,6 +45,7 @@ def handle_disconnect():
 
 @socketio.on("control")
 def handle_control(payload):
+    """Apply a playback control event and broadcast the resulting room state."""
     if not is_authenticated():
         return False
     payload = payload or {}
@@ -55,6 +58,7 @@ def handle_control(payload):
 
 @socketio.on("heartbeat")
 def handle_heartbeat(payload):
+    """Acknowledge a heartbeat so the client can update its clock offset."""
     if not is_authenticated():
         return False
     payload = payload or {}
@@ -71,6 +75,7 @@ def handle_heartbeat(payload):
 
 @socketio.on("sync:resync")
 def handle_resync(payload=None):
+    """Send the requester a fresh playback snapshot on explicit resync demand."""
     if not is_authenticated():
         return False
     snapshot = playback_state.snapshot()
@@ -79,6 +84,7 @@ def handle_resync(payload=None):
 
 
 def _coerce_int(value):
+    """Best-effort convert untrusted payload values into integers."""
     try:
         return int(value)
     except (TypeError, ValueError):
@@ -86,6 +92,7 @@ def _coerce_int(value):
 
 
 def _build_heartbeat(payload: dict) -> dict:
+    """Normalize the subset of heartbeat fields used for logging and debugging."""
     return {
         "actor": request.sid,
         "url": payload.get("url"),
@@ -96,4 +103,5 @@ def _build_heartbeat(payload: dict) -> dict:
 
 
 def _server_now_ms() -> int:
+    """Return the current server time as a UTC millisecond timestamp."""
     return int(datetime.now(timezone.utc).timestamp() * 1000)

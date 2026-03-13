@@ -1,3 +1,4 @@
+// Handle video URL submission and local iframe rendering.
 document.addEventListener('DOMContentLoaded', () => {
   const input = document.getElementById('video-url');
   const button = document.getElementById('load-video');
@@ -5,6 +6,7 @@ document.addEventListener('DOMContentLoaded', () => {
   const container = document.getElementById('player-container');
 
   function renderPlayer(url, shouldAutoplay) {
+    // Keep a single iframe instance and just replace its embed URL.
     if (!container) return;
     const target = new URL(url);
     target.searchParams.set('autoplay', shouldAutoplay ? '1' : '0');
@@ -24,6 +26,7 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 
   async function submitVideo(url) {
+    // Send the requested Bilibili URL to the server for validation.
     const resp = await fetch('/video', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },

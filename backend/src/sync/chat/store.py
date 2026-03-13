@@ -14,6 +14,7 @@ class ChatStore:
     """Stores recent chat messages in-memory with dedupe and bounded capacity."""
 
     def __init__(self, capacity: int = DEFAULT_CAPACITY):
+        """Initialize the bounded message deque and id index."""
         self.capacity = max(1, capacity)
         self._messages: deque[dict] = deque()
         self._by_id: dict[str, dict] = {}
@@ -55,6 +56,7 @@ class ChatStore:
             return set(self._by_id.keys())
 
     def clear(self) -> None:
+        """Remove all stored messages and dedupe state."""
         with self._lock:
             self._messages.clear()
             self._by_id.clear()

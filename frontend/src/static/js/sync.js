@@ -1,3 +1,4 @@
+// Keep the local player aligned with the shared room state from Socket.IO.
 document.addEventListener('DOMContentLoaded', () => {
   if (!window.io) {
     return;
@@ -35,10 +36,12 @@ document.addEventListener('DOMContentLoaded', () => {
   const nowMs = () => performance.now();
 
   function setStatus(text) {
+    // Show the current playback or connection status near the player.
     if (statusEl) statusEl.textContent = text;
   }
 
   function setControlsEnabled(enabled) {
+    // Prevent local playback controls from firing before a video is available.
     [playBtn, pauseBtn, seekBtn].forEach((btn) => {
       if (btn) btn.disabled = !enabled;
     });
@@ -47,6 +50,7 @@ document.addEventListener('DOMContentLoaded', () => {
   setControlsEnabled(false);
 
   function resetPlaybackForNewVideo(url) {
+    // Reset local timing whenever a different shared video is selected.
     lastState = {
       status: 'paused',
       position_ms: 0,
@@ -59,6 +63,7 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 
   function pruneOffsetSamples(nowPerf) {
+    // Keep only recent offset samples so reconnects and clock drift can recover.
     offsetSamples = offsetSamples.filter((sample) => nowPerf - sample.received_perf_ms <= OFFSET_MAX_AGE_MS);
     if (offsetSamples.length > OFFSET_SAMPLE_LIMIT) {
       offsetSamples = offsetSamples.slice(-OFFSET_SAMPLE_LIMIT);
@@ -74,10 +79,12 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 
   function shouldThrottleResync(nowPerf = nowMs()) {
+    // Avoid flooding the server with repeated resync requests while unstable.
     return lastResyncRequestAt !== null && (nowPerf - lastResyncRequestAt) < RESYNC_COOLDOWN_MS;
   }
 
   function requestResync() {
+    // Ask the server for a fresh authoritative snapshot when drift is too large.
     const nowPerf = nowMs();
     if (shouldThrottleResync(nowPerf) || !socket.connected) {
       return;
@@ -87,6 +94,7 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 
   function derivePositionFromServerState(state, offsetSample = currentOffsetSample()) {
+    // Map a server snapshot onto the local perf clock and advance it to now.
     const serverPositionMs = Math.max(0, Number(state.server_position_ms ?? state.position_ms) || 0);
     const stateAtMs = Number(state.state_at_ms);
     if (state.status !== 'playing' || !Number.isFinite(stateAtMs) || !offsetSample) {
@@ -98,6 +106,7 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 
   function applyState(state, { rerender = true } = {}) {
+    // Store the latest authoritative state and optionally refresh the iframe.
     const serverPositionMs = Math.max(0, Number(state.position_ms) || 0);
     const derivedPositionMs = derivePositionFromServerState(
       {
@@ -135,6 +144,7 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 
   function maybeRequestResync() {
+    // Compare local progress with the projected server position after each heartbeat.
     const offsetSample = currentOffsetSample();
     if (!offsetSample || !lastState.url || lastState.status !== 'playing') {
       return;
@@ -147,6 +157,7 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 
   function recordOffsetSample(clientPerfSentMs, ack) {
+    // Convert a heartbeat round trip into one offset sample for server-time mapping.
     if (!ack || typeof ack.server_now_ms !== 'number' || typeof clientPerfSentMs !== 'number') {
       return;
     }
@@ -170,6 +181,7 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 
   function currentPositionMs() {
+    // Advance the locally cached baseline forward while playback is running.
     const base = lastState.position_ms || 0;
     if (lastState.status === 'playing') {
       return Math.max(0, base + (nowMs() - lastStateAt));
@@ -178,6 +190,7 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 
   function renderPlayer(url, isPlaying, positionMs) {
+    // Rebuild the embed URL so autoplay and seek state match the shared snapshot.
     if (!container) return;
     const target = new URL(url);
     target.searchParams.set('autoplay', isPlaying ? '1' : '0');
@@ -202,6 +215,7 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 
   function describePlayback() {
+    // Render a human-readable status line for debugging the sync state.
     const positionSeconds = Math.round(currentPositionMs() / 1000);
     const stateLabel = lastState.status || 'unknown';
     const stateAt = lastStateAt || nowMs();
@@ -214,6 +228,7 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 
   function refreshStatus() {
+    // Keep the status line consistent with the latest connection and playback state.
     if (connectionStatus !== 'connected') {
       setStatus('Disconnected - attempting reconnect');
       return;
@@ -222,6 +237,7 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 
   function sendHeartbeat() {
+    // Sample the local position and collect one offset measurement from the server.
     if (!socket.connected) return;
     const heartbeat = {
       url: lastState.url,
@@ -259,6 +275,7 @@ document.addEventListener('DOMContentLoaded', () => {
   });
 
   function emitControl(type, position_ms) {
+    // Send a local play, pause, or seek intent to the shared room.
     if (!lastState.url) {
       setStatus('Load a video before using playback controls');
       return;

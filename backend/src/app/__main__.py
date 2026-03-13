@@ -4,6 +4,7 @@ from app import create_app, socketio
 
 
 def main() -> None:
+    """Start the development server with the configured host and port."""
     app = create_app()
     host = os.getenv("APP_HOST", "0.0.0.0")
     port = int(os.getenv("APP_PORT", "5000"))

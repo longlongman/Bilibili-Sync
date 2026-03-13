@@ -96,6 +96,7 @@
    * Toggle voice chat on/off.
    */
   async function toggleVoice() {
+    // Join or leave the shared voice mesh depending on the current state.
     if (!socket || !socket.connected) {
       updateStatus('Not connected', 'error');
       return;
@@ -112,6 +113,7 @@
    * Join voice chat.
    */
   async function joinVoice() {
+    // Capture microphone audio, announce presence, and connect to peers.
     if (isJoining || isInVoice) return; // Prevent double join
     isJoining = true;
 
@@ -182,6 +184,7 @@
    * Leave voice chat.
    */
   async function leaveVoice() {
+    // Leave the voice room and tear down all local media resources.
     if (!isInVoice) return;
 
     isJoining = false;
@@ -242,6 +245,7 @@
    * Set up peer connections to all existing participants.
    */
   async function setupPeerConnections(participants) {
+    // Ensure there is one outbound peer connection for each existing participant.
     for (const participant of participants) {
       if (participant.sid === socket.id) continue;
 
@@ -263,6 +267,7 @@
    * Create a peer connection to a specific user.
    */
   async function createPeerConnection(targetSid, isInitiator) {
+    // Create and configure one RTCPeerConnection for a remote participant.
     if (peers.has(targetSid)) {
       console.log('[Voice] Peer already exists:', targetSid);
       return;
@@ -328,6 +333,7 @@
    * Handle incoming WebRTC signaling data.
    */
   async function handleSignal(fromSid, data) {
+    // Apply incoming WebRTC offers, answers, and ICE candidates.
     let pc = peers.get(fromSid);
 
     if (data.type === 'offer') {

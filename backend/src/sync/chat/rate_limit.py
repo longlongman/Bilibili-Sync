@@ -9,6 +9,7 @@ from typing import Deque
 
 class RateLimitResult:
     def __init__(self, allowed: bool, code: str | None = None, retry_after_s: float | None = None):
+        """Store the outcome of a rate-limit check in a compact value object."""
         self.allowed = allowed
         self.code = code
         self.retry_after_s = retry_after_s
@@ -18,11 +19,13 @@ class RateLimiter:
     """Track per-participant send cadence with min-interval and per-minute caps."""
 
     def __init__(self, min_interval_s: float = 1.0, max_per_minute: int = 10):
+        """Configure the rate-limit thresholds and initialize participant history."""
         self.min_interval = max(0.0, float(min_interval_s))
         self.max_per_minute = max(1, int(max_per_minute))
         self._events: dict[str, Deque[datetime]] = {}
 
     def check(self, participant_id: str, *, now: datetime | None = None) -> RateLimitResult:
+        """Return whether the participant can send a message at the given time."""
         now = now or datetime.now(timezone.utc)
         history = self._events.setdefault(participant_id, deque())
 
