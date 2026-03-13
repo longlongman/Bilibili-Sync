@@ -27,16 +27,10 @@ def test_snapshot_advances_position_while_playing():
 
     snapshot = state.snapshot()
     assert snapshot["position_ms"] > 1000
-    assert snapshot["state_at"]
     assert isinstance(snapshot["state_at_ms"], int)
 
 
 def test_apply_ignores_client_reported_time():
     state = PlaybackState()
-    snapshot = state.apply(
-        "play",
-        1200,
-        actor="a1",
-        reported_at="1999-01-01T00:00:00Z",
-    )
-    assert snapshot["state_at"] != "1999-01-01T00:00:00Z"
+    snapshot = state.apply("play", 1200, actor="a1")
+    assert isinstance(snapshot["state_at_ms"], int)

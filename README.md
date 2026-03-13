@@ -75,12 +75,13 @@ gunicorn \
 - `POST /video` — Authenticated; body `{ "url": "<bilibili link>" }`; responds with `{ ok, embed_url }`.  
 - Socket.IO (`/socket.io`):
   - `state` (server → client): Current playback snapshot on connect and after updates.
-  - `control` (client → server): `{ type: "play"|"pause"|"seek", position_ms, reported_at }`.
-  - `heartbeat` (client → server): `{ url, status, position_ms, reported_at }` for drift detection.
+  - `control` (client → server): `{ type: "play"|"pause"|"seek", position_ms }`.
+  - `heartbeat` (client → server): `{ url, status, position_ms, client_perf_sent_ms }`; ack returns `{ server_now_ms }` for client-side clock mapping.
+  - `sync:resync` (client → server): Request a fresh playback snapshot when local drift exceeds the client threshold.
 
 ## Frontend Notes
 - Templates: `frontend/src/templates/index.html` (player) and `login.html` (auth gate).
-- Scripts: `frontend/src/static/js/auth.js` (login/logout), `video.js` (URL submit + iframe), `sync.js` (Socket.IO wiring).
+- Scripts: `frontend/src/static/js/auth.js` (login/logout), `video.js` (URL submit + iframe), `sync.js` (Socket.IO wiring + drift recovery).
 - Styles: `frontend/src/static/css/style.css` (minimal, easy to extend).
 
 ## Tests

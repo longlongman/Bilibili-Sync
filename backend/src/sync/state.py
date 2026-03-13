@@ -55,8 +55,6 @@ class PlaybackState:
             "position_ms": position_ms,
             "actor": self.last_actor,
             "state_at_ms": state_at_ms,
-            "state_at": _format_timestamp(state_at),
-            "reported_at": _format_timestamp(state_at),
         }
 
     def set_video(self, url: str):
@@ -71,7 +69,6 @@ class PlaybackState:
         event_type: str,
         position_ms: Optional[int],
         actor: Optional[str],
-        reported_at: Optional[str] = None,
     ) -> Optional[dict]:
         if event_type not in {"play", "pause", "seek"}:
             return None

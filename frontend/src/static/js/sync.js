@@ -68,6 +68,8 @@ document.addEventListener('DOMContentLoaded', () => {
   function currentOffsetSample(nowPerf = nowMs()) {
     pruneOffsetSamples(nowPerf);
     if (offsetSamples.length === 0) return null;
+    // The lowest-RTT sample is usually the cleanest mapping from server time
+    // into the local perf clock because it includes the least queueing delay.
     return offsetSamples.reduce((best, sample) => (sample.rtt_ms < best.rtt_ms ? sample : best));
   }
 
@@ -121,6 +123,8 @@ document.addEventListener('DOMContentLoaded', () => {
     if (!lastState.url || lastState.status !== 'playing' || !Number.isFinite(Number(lastState.state_at_ms))) {
       return;
     }
+    // The first offset often arrives after the initial state, so re-derive the
+    // playback baseline from the last server snapshot once timing is available.
     applyState(
       {
         ...lastState,

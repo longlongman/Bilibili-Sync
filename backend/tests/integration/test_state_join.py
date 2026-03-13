@@ -28,7 +28,6 @@ def test_join_receives_current_state(monkeypatch):
     assert data["url"]
     assert data["status"] == "playing"
     assert data["position_ms"] > 5000
-    assert data["state_at"]
     assert isinstance(data["state_at_ms"], int)
 
 
@@ -43,7 +42,6 @@ def test_control_broadcast_reaches_other_clients(monkeypatch):
         {
             "type": "play",
             "position_ms": 1000,
-            "reported_at": "1999-01-01T00:00:00Z",
         },
     )
     time.sleep(0.1)
@@ -53,9 +51,8 @@ def test_control_broadcast_reaches_other_clients(monkeypatch):
     latest = states[-1]["args"][0]
     assert latest["status"] == "playing"
     assert latest["position_ms"] >= 1000
-    assert latest["state_at"]
     assert isinstance(latest["state_at_ms"], int)
-    assert playback_state.last_event_at != "1999-01-01T00:00:00Z"
+    assert playback_state.last_event_at is not None
 
     client_a.disconnect()
     client_b.disconnect()
