@@ -1,11 +1,14 @@
 from flask import Blueprint, jsonify, redirect, render_template, request, session, url_for
 from sync.state import playback_state
+from sync.timebase import server_now_ms
 from video.logging import log_video_selection
 from video.validator import normalize_bilibili_url
 
+from app import socketio
 from app.auth import is_authenticated, login_with_password, require_auth
 
 bp = Blueprint("app", __name__)
+SYNC_ROOM = "shared-room"
 
 try:
     # Optional import; chat routes may not exist in every feature set.
@@ -43,14 +46,23 @@ def logout():
 @bp.route("/video", methods=["POST"])
 @require_auth
 def set_video():
+    # `/video` is the only HTTP endpoint that mutates playback state. The
+    # actual player update still fans out through Socket.IO so every client,
+    # including the initiator, applies the same authoritative `state` payload.
     payload = request.get_json() or {}
     url = payload.get("url")
     valid, embed_url, error = normalize_bilibili_url(url)
     if not valid or not embed_url:
         return jsonify({"ok": False, "error": error}), 400
-    playback_state.set_video(embed_url)
+    state_time_ms = server_now_ms()
+    state = playback_state.set_video(
+        embed_url,
+        event_server_ms=state_time_ms,
+        actor=request.remote_addr or "unknown",
+    )
+    socketio.emit("state", playback_state.snapshot(server_now_ms()), room=SYNC_ROOM)
     log_video_selection(request.remote_addr or "unknown", embed_url)
-    return jsonify({"ok": True, "embed_url": embed_url})
+    return jsonify({"ok": True, "embed_url": embed_url, "state": state})
 
 
 @bp.route("/api/chat/history", methods=["GET"])

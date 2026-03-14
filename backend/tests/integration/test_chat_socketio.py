@@ -1,7 +1,6 @@
 import time
 
 import pytest
-
 from app import create_app, socketio
 from app.auth import SESSION_AUTH_KEY
 from sync.chat.context import chat_store

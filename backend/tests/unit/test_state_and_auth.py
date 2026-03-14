@@ -4,7 +4,8 @@ from sync.state import PlaybackState
 
 def test_playback_state_apply_updates_status_and_position():
     state = PlaybackState()
-    result = state.apply("play", 5000, actor="user1")
+    state.set_video("https://player.bilibili.com/player.html?bvid=BV1xx", event_server_ms=1000)
+    result = state.apply("play", 5000, actor="user1", event_server_ms=1500)
     assert result["status"] == "playing"
     assert result["position_ms"] == 5000
     assert result["actor"] == "user1"

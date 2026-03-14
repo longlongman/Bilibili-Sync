@@ -5,6 +5,7 @@ from __future__ import annotations
 from typing import Any
 
 from app import socketio
+
 from sync.chat.context import chat_store
 
 DEFAULT_HISTORY_LIMIT = 50

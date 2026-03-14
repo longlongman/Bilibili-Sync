@@ -4,10 +4,10 @@ from __future__ import annotations
 
 import logging
 
-from flask import request
-
 from app import socketio
 from app.auth import is_authenticated
+from flask import request
+
 from sync.voice.state import voice_state
 
 logger = logging.getLogger(__name__)
@@ -90,7 +90,12 @@ def handle_voice_signal(payload):
     if not target_sid or not signal_data:
         return {"ok": False, "error": "invalid payload"}
 
-    logger.info("Voice signal: from=%s to=%s type=%s", request.sid, target_sid, signal_data.get("type") if signal_data else "unknown")
+    logger.info(
+        "Voice signal: from=%s to=%s type=%s",
+        request.sid,
+        target_sid,
+        signal_data.get("type") if signal_data else "unknown",
+    )
 
     # Validate target is in voice
     if not voice_state.is_in_voice(target_sid):

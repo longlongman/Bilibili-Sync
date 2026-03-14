@@ -1,7 +1,6 @@
 from datetime import datetime, timedelta, timezone
 
 import pytest
-
 from sync.chat.rate_limit import RateLimiter
 from sync.chat.schema import ValidationError, normalize_message_payload
 from sync.chat.store import ChatStore

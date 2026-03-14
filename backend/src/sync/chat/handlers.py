@@ -3,16 +3,18 @@
 from __future__ import annotations
 
 import logging
-from flask import request
 
 from app import socketio
 from app.auth import is_authenticated
+from flask import request
+
+from sync import metrics
 from sync.chat.context import chat_store, rate_limiter
 from sync.chat.schema import ValidationError, normalize_message_payload
-from sync import metrics
 
 CHAT_ROOM = "shared-room"
 logger = logging.getLogger(__name__)
+
 
 def _sender_label() -> str:
     sid = request.sid or "anonymous"

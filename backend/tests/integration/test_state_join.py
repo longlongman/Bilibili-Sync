@@ -16,8 +16,9 @@ def make_socket_client(app, auth=True):
 def test_join_receives_current_state(monkeypatch):
     monkeypatch.setenv("APP_SHARED_PASSWORD", "secret")
     app = create_app()
-    playback_state.set_video("https://player.bilibili.com/player.html?bvid=BV1xx")
-    playback_state.apply("play", 5000, actor="seed")
+    playback_state.reset()
+    playback_state.set_video("https://player.bilibili.com/player.html?bvid=BV1xx", event_server_ms=1000)
+    playback_state.apply("play", 5000, actor="seed", event_server_ms=2000)
 
     client = make_socket_client(app)
     received = client.get_received()
@@ -27,11 +28,16 @@ def test_join_receives_current_state(monkeypatch):
     assert data["url"]
     assert data["status"] in {"playing", "paused"}
     assert data["position_ms"] >= 0
+    assert data["server_state_at_ms"] == 2000
+    assert data["revision"] == 2
+    client.disconnect()
 
 
 def test_control_broadcast_reaches_other_clients(monkeypatch):
     monkeypatch.setenv("APP_SHARED_PASSWORD", "secret")
     app = create_app()
+    playback_state.reset()
+    playback_state.set_video("https://player.bilibili.com/player.html?bvid=BV1xx", event_server_ms=1000)
     client_a = make_socket_client(app)
     client_b = make_socket_client(app)
 
@@ -43,6 +49,7 @@ def test_control_broadcast_reaches_other_clients(monkeypatch):
     latest = states[-1]["args"][0]
     assert latest["status"] == "playing"
     assert latest["position_ms"] == 1000
+    assert latest["revision"] == 2
 
     client_a.disconnect()
     client_b.disconnect()
