@@ -62,6 +62,15 @@ def handle_control(payload):
         _coerce_int(payload.get("event_server_ms_est")),
         server_recv_ms,
     )
+    if _is_stale_control(event_server_ms):
+        logger.info(
+            "dropping_stale_control sid=%s type=%s event_server_ms=%s last_event_server_ms=%s",
+            request.sid,
+            event_type,
+            event_server_ms,
+            playback_state.last_event_server_ms,
+        )
+        return None
     update = playback_state.apply(
         event_type,
         position_ms,
@@ -142,3 +151,10 @@ def _clamp_event_server_ms(event_server_ms: int | None, server_recv_ms: int) -> 
     lower_bound = server_recv_ms - MAX_EVENT_AGE_MS
     upper_bound = server_recv_ms + MAX_FUTURE_EVENT_MS
     return max(lower_bound, min(upper_bound, event_server_ms))
+
+
+def _is_stale_control(event_server_ms: int) -> bool:
+    last_event_server_ms = playback_state.last_event_server_ms
+    if last_event_server_ms is None:
+        return False
+    return event_server_ms < last_event_server_ms

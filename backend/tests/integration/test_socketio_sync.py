@@ -3,6 +3,7 @@ import time
 from app import create_app, socketio
 from app.auth import SESSION_AUTH_KEY
 from sync.state import playback_state
+from sync.timebase import server_now_ms
 
 
 def make_client(app):
@@ -36,6 +37,43 @@ def test_play_pause_seek_broadcast(monkeypatch):
     time.sleep(0.1)
     updates = [e for e in c2.get_received() if e["name"] == "state"]
     assert updates[-1]["args"][0]["status"] == "paused"
+
+    c1.disconnect()
+    c2.disconnect()
+
+
+def test_older_control_arriving_late_does_not_overwrite_room_state(monkeypatch):
+    monkeypatch.setenv("APP_SHARED_PASSWORD", "secret")
+    app = create_app()
+    playback_state.reset()
+    playback_state.set_video("https://player.bilibili.com/player.html?bvid=BV1xx", event_server_ms=1000)
+    c1 = make_client(app)
+    c2 = make_client(app)
+
+    c1.get_received()
+    c2.get_received()
+
+    first_event_server_ms = server_now_ms()
+    c1.emit("control", {"type": "play", "position_ms": 1000, "event_server_ms_est": first_event_server_ms})
+    time.sleep(0.05)
+    c2.get_received()
+
+    second_event_server_ms = server_now_ms()
+    c1.emit("control", {"type": "pause", "position_ms": 1500, "event_server_ms_est": second_event_server_ms})
+    time.sleep(0.05)
+    pause_updates = [e for e in c2.get_received() if e["name"] == "state"]
+    assert pause_updates
+    assert pause_updates[-1]["args"][0]["status"] == "paused"
+    assert pause_updates[-1]["args"][0]["revision"] == 3
+
+    c1.emit("control", {"type": "play", "position_ms": 1000, "event_server_ms_est": first_event_server_ms})
+    time.sleep(0.05)
+    stale_updates = [e for e in c2.get_received() if e["name"] == "state"]
+    assert stale_updates == []
+    assert playback_state.status == "paused"
+    assert playback_state.position_ms == 1500
+    assert playback_state.last_event_server_ms == second_event_server_ms
+    assert playback_state.revision == 3
 
     c1.disconnect()
     c2.disconnect()
