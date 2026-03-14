@@ -19,6 +19,7 @@ document.addEventListener('DOMContentLoaded', () => {
   const HEARTBEAT_INTERVAL_MS = 5000;
   const CLOCK_SMOOTHING = 0.2;
   const RTT_SMOOTHING = 0.3;
+  const OFFSET_REAPPLY_THRESHOLD_MS = 100;
 
   let lastState = emptyState();
   let lastStateReceivedMonoMs = performance.now();
@@ -165,13 +166,13 @@ document.addEventListener('DOMContentLoaded', () => {
 
   function updateClockSync(ack, clientReceivedMonoMs) {
     if (!ack || ack.ok !== true) {
-      return;
+      return false;
     }
     const clientSentMonoMs = Number(ack.client_sent_mono_ms);
     const serverRecvMs = Number(ack.server_recv_ms);
     const serverSendMs = Number(ack.server_send_ms);
     if ([clientSentMonoMs, serverRecvMs, serverSendMs].some(Number.isNaN)) {
-      return;
+      return false;
     }
 
     // NTP-style offset estimation maps local monotonic time onto the
@@ -179,8 +180,13 @@ document.addEventListener('DOMContentLoaded', () => {
     const sampleRttMs = Math.max(0, (clientReceivedMonoMs - clientSentMonoMs) - (serverSendMs - serverRecvMs));
     const sampleOffsetMs = ((serverRecvMs - clientSentMonoMs) + (serverSendMs - clientReceivedMonoMs)) / 2;
 
+    const previousOffsetMs = clockOffsetMs;
     estimatedRttMs = smooth(estimatedRttMs, sampleRttMs, RTT_SMOOTHING);
     clockOffsetMs = smooth(clockOffsetMs, sampleOffsetMs, CLOCK_SMOOTHING);
+    if (previousOffsetMs === null) {
+      return true;
+    }
+    return Math.abs(clockOffsetMs - previousOffsetMs) >= OFFSET_REAPPLY_THRESHOLD_MS;
   }
 
   function describePlayback() {
@@ -215,9 +221,11 @@ document.addEventListener('DOMContentLoaded', () => {
     };
     socket.emit('heartbeat', heartbeat, (ack) => {
       const clientReceivedMonoMs = nowMonoMs();
-      updateClockSync(ack, clientReceivedMonoMs);
+      const shouldReapplyState = updateClockSync(ack, clientReceivedMonoMs);
       if (ack && ack.correction) {
         applyIncomingState(ack.correction);
+      } else if (shouldReapplyState && lastState.url && lastState.status === 'playing') {
+        applyIncomingState(lastState);
       }
       refreshStatus();
     });
