@@ -11,3 +11,4 @@ def test_video_ui_template_renders(monkeypatch):
         body = resp.get_data(as_text=True)
         assert "Bilibili Link" in body
         assert "Load Video" in body
+        assert 'id="player-note"' in body

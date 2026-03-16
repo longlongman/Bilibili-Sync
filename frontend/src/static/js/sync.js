@@ -10,6 +10,7 @@ document.addEventListener('DOMContentLoaded', () => {
   const pauseBtn = document.getElementById('pause-btn');
   const seekBtn = document.getElementById('seek-btn');
   const container = document.getElementById('player-container');
+  const playerNoteEl = document.getElementById('player-note');
   const clockFormatter = new Intl.DateTimeFormat(undefined, {
     hour: '2-digit',
     minute: '2-digit',
@@ -20,12 +21,16 @@ document.addEventListener('DOMContentLoaded', () => {
   const CLOCK_SMOOTHING = 0.2;
   const RTT_SMOOTHING = 0.3;
   const OFFSET_REAPPLY_THRESHOLD_MS = 100;
+  const MOBILE_UA_PATTERN = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini|Mobile|HarmonyOS/i;
+  const BILIBILI_DESKTOP_PLAYER_HOST = 'player.bilibili.com';
+  const BILIBILI_MOBILE_PLAYER_URL = 'https://www.bilibili.com/blackboard/html5mobileplayer.html';
 
   let lastState = emptyState();
   let lastStateReceivedMonoMs = performance.now();
   let connectionStatus = 'disconnected';
   let clockOffsetMs = null;
   let estimatedRttMs = null;
+  const prefersMobileBilibiliPlayer = detectMobilePlayerPreference();
 
   function emptyState() {
     // A `state` payload represents the room at a specific server timestamp.
@@ -49,6 +54,14 @@ document.addEventListener('DOMContentLoaded', () => {
     if (statusEl) statusEl.textContent = text;
   }
 
+  function setPlayerNote(text) {
+    if (!playerNoteEl) {
+      return;
+    }
+    playerNoteEl.textContent = text || '';
+    playerNoteEl.hidden = !text;
+  }
+
   function setControlsEnabled(enabled) {
     [playBtn, pauseBtn, seekBtn].forEach((btn) => {
       if (btn) btn.disabled = !enabled;
@@ -56,6 +69,58 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 
   setControlsEnabled(false);
+
+  function detectMobilePlayerPreference() {
+    if (typeof navigator !== 'undefined' && navigator.userAgentData && typeof navigator.userAgentData.mobile === 'boolean') {
+      return navigator.userAgentData.mobile;
+    }
+
+    const coarsePointer = Boolean(window.matchMedia && window.matchMedia('(pointer: coarse)').matches);
+    const narrowViewport = Boolean(window.matchMedia && window.matchMedia('(max-width: 768px)').matches);
+    const userAgent = typeof navigator !== 'undefined' ? navigator.userAgent || '' : '';
+    return MOBILE_UA_PATTERN.test(userAgent) || (coarsePointer && narrowViewport);
+  }
+
+  function buildPlayerTarget(url, isPlaying, positionMs) {
+    const source = new URL(url);
+    const bvid = source.searchParams.get('bvid') || source.searchParams.get('bv');
+    const useMobilePlayer = prefersMobileBilibiliPlayer
+      && source.hostname === BILIBILI_DESKTOP_PLAYER_HOST
+      && Boolean(bvid);
+
+    const target = useMobilePlayer ? new URL(BILIBILI_MOBILE_PLAYER_URL) : new URL(url);
+    if (useMobilePlayer && bvid) {
+      target.searchParams.set('bvid', bvid);
+      const page = source.searchParams.get('page') || source.searchParams.get('p');
+      if (page) {
+        target.searchParams.set('p', page);
+      }
+      target.searchParams.set('hideCoverInfo', '1');
+      target.searchParams.set('hasMuteButton', '1');
+    }
+
+    if (useMobilePlayer) {
+      if (isPlaying) {
+        target.searchParams.set('autoplay', '1');
+      } else {
+        target.searchParams.delete('autoplay');
+      }
+    } else {
+      target.searchParams.set('autoplay', isPlaying ? '1' : '0');
+    }
+
+    const seconds = Math.floor(Math.max(0, positionMs || 0) / 1000);
+    if (seconds > 0) {
+      target.searchParams.set('t', String(seconds));
+    } else {
+      target.searchParams.delete('t');
+    }
+
+    return {
+      src: target.toString(),
+      useMobilePlayer,
+    };
+  }
 
   function smooth(previousValue, nextValue, factor) {
     if (previousValue === null || previousValue === undefined) {
@@ -101,24 +166,31 @@ document.addEventListener('DOMContentLoaded', () => {
 
   function renderPlayer(url, isPlaying, positionMs) {
     if (!container) return;
-    const target = new URL(url);
-    target.searchParams.set('autoplay', isPlaying ? '1' : '0');
-    const seconds = Math.floor(Math.max(0, positionMs || 0) / 1000);
-    if (seconds > 0) {
-      target.searchParams.set('t', String(seconds));
-    } else {
-      target.searchParams.delete('t');
+    let playerTarget;
+    try {
+      playerTarget = buildPlayerTarget(url, isPlaying, positionMs);
+    } catch (error) {
+      setPlayerNote('');
+      setStatus('Unable to render player');
+      return;
     }
+
+    setPlayerNote(playerTarget.useMobilePlayer
+      ? 'Mobile playback uses Bilibili H5 player to avoid the mbplayer cross-origin error. Autoplay may still require a tap.'
+      : '');
+
     let iframe = container.querySelector('iframe');
     if (!iframe) {
       iframe = document.createElement('iframe');
       iframe.setAttribute('allow', 'autoplay; fullscreen');
       iframe.setAttribute('frameborder', '0');
-      iframe.style.width = '100%';
-      iframe.style.height = '480px';
+      iframe.setAttribute('scrolling', 'no');
+      iframe.className = 'bilibili-player-frame';
+      iframe.title = 'Bilibili player';
+      iframe.referrerPolicy = 'strict-origin-when-cross-origin';
       container.appendChild(iframe);
     }
-    const nextSrc = target.toString();
+    const nextSrc = playerTarget.src;
     // Always reset src so repeated seek commands take effect.
     iframe.src = nextSrc;
   }
@@ -161,6 +233,8 @@ document.addEventListener('DOMContentLoaded', () => {
         nextState.status === 'playing',
         roundMs(projectedPositionMs(nextState, monoMs, monoMs)),
       );
+    } else {
+      setPlayerNote('');
     }
   }
 
