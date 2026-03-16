@@ -1,4 +1,13 @@
-from flask import Blueprint, jsonify, redirect, render_template, request, session, url_for
+from flask import (
+    Blueprint,
+    current_app,
+    jsonify,
+    redirect,
+    render_template,
+    request,
+    session,
+    url_for,
+)
 from sync.state import playback_state
 from sync.timebase import server_now_ms
 from video.logging import log_video_selection
@@ -20,7 +29,15 @@ except Exception:  # pragma: no cover - fallback when chat not present
 @bp.route("/", methods=["GET"])
 @require_auth
 def index():
-    return render_template("index.html")
+    app_config = {
+        "voice": {
+            "iceServers": current_app.config.get("WEBRTC_ICE_SERVERS", []),
+            "iceTransportPolicy": current_app.config.get(
+                "WEBRTC_ICE_TRANSPORT_POLICY", "all"
+            ),
+        }
+    }
+    return render_template("index.html", app_config=app_config)
 
 
 @bp.route("/login", methods=["GET", "POST"])

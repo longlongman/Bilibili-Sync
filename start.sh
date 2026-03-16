@@ -7,6 +7,7 @@ set -euo pipefail
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 BACKEND_DIR="${SCRIPT_DIR}/backend"
 SRC_DIR="${BACKEND_DIR}/src"
+VOICE_ENV_FILE="${BACKEND_DIR}/.voice.env"
 
 # Activate conda environment
 if [ -f "/root/miniconda3/etc/profile.d/conda.sh" ]; then
@@ -18,6 +19,11 @@ cd "${BACKEND_DIR}"
 
 # Ensure Python can import the backend/src directory
 export PYTHONPATH="${SRC_DIR}:${PYTHONPATH:-}"
+
+if [ -f "${VOICE_ENV_FILE}" ]; then
+  # shellcheck disable=SC1090
+  source "${VOICE_ENV_FILE}"
+fi
 
 : "${APP_SHARED_PASSWORD:=changeme}"
 : "${APP_HOST:=0.0.0.0}"

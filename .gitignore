@@ -13,4 +13,5 @@ playwright/.cache/
 .coverage
 .env
 .env.*
+backend/.voice.env
 .DS_Store

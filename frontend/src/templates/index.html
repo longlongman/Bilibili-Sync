@@ -54,5 +54,8 @@
 <script src="/static/js/video.js"></script>
 <script src="/static/js/sync.js"></script>
 <script src="/static/js/chat.js"></script>
+<script>
+  window.__APP_CONFIG__ = {{ app_config|tojson }};
+</script>
 <script src="/static/js/voice.js"></script>
 {% endblock %}
